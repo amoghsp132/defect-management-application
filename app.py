@@ -1,12 +1,6 @@
 """
-Web-Based Defect Management Application (Python / Flask)
+BugVortex — Web-Based Defect Management Application (Python / Flask)
 Addressing Slide 1.9 (The 6 Subprocesses of Defect Management) & Defect Tools (Bugzilla/FogBugz)
-
-SDM College of Engineering & Technology, Dharwad
-Department of Computer Science & Engineering
-Course: Software Testing (22UCSES731)
-Author: Amogh S Patil (2SDS23CS011)
-Academic Year: 2026-27
 """
 
 import os
@@ -29,9 +23,8 @@ def index():
 def health():
     return jsonify({
         "status": "healthy",
-        "application": "Defect Management & Analytics Application",
-        "author": "Amogh S Patil (2SDS23CS011)",
-        "course": "Software Testing (22UCSES731)",
+        "application": "BugVortex — Defect Management & Risk Analytics Platform",
+        "version": "3.1.0",
         "subprocesses_covered": [
             "1. Defect Prevention",
             "2. Defect Discovery",
@@ -99,7 +92,6 @@ def create_defect():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Generate sequential defect code (e.g. DEF-107)
     cursor.execute("SELECT MAX(id) as max_id FROM defects")
     row = cursor.fetchone()
     next_id = (row['max_id'] or 100) + 1
@@ -127,7 +119,7 @@ def create_defect():
         data.get('discovery_phase', 'System Testing'),
         data.get('environment', 'QA Staging'),
         'New',
-        data.get('reporter', 'Amogh Patil (QA)'),
+        data.get('reporter', 'QA Engineer'),
         data.get('assignee', 'Unassigned'),
         data.get('prevention_guideline', ''),
         '',
@@ -223,7 +215,7 @@ def add_prevention_guideline():
         data.get('category', 'Coding Standard'),
         guideline,
         data.get('root_cause_pattern', 'Preventable recurrent logic flaw.'),
-        data.get('added_by', 'Amogh Patil'),
+        data.get('added_by', 'QA Lead'),
         now
     ))
     conn.commit()
@@ -260,7 +252,6 @@ def get_analytics():
         by_discovery[disc] = by_discovery.get(disc, 0) + 1
 
     # Defect Prediction Algorithm (Slide 1.9 & Slide 1):
-    # Calculates Defect Risk Index based on concentration of Critical/Blocker defects and module defect count
     module_risk_scores = {}
     for d in defects:
         mod = d['module']
@@ -307,7 +298,6 @@ def export_csv():
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Bugzilla/FogBugz compatible column headers
     headers = [
         "Defect_ID", "Title", "Module", "Type", "Severity", "Priority",
         "Status", "Discovery_Phase", "Environment", "Reporter", "Assignee",
@@ -338,7 +328,7 @@ def export_csv():
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=defects_export_sdmcet.csv"}
+        headers={"Content-Disposition": "attachment;filename=defects_export.csv"}
     )
 
 

@@ -1,7 +1,6 @@
 """
 Database Layer for Defect Management Application (SQLite)
-SDM College of Engineering & Technology, Dharwad
-Author: Amogh S Patil (2SDS23CS011)
+BugVortex — Intelligent Defect Lifecycle & Quality Assurance System
 """
 
 import sqlite3
@@ -89,7 +88,7 @@ def seed_data(cursor):
             "System Testing",
             "Staging / QA",
             "In Progress",
-            "Amogh Patil (QA Lead)",
+            "Alex Rivera (QA Lead)",
             "Karthik (Backend Eng)",
             "Implement resilient circuit breaker and 5-second socket read timeout with asynchronous webhook verification.",
             "Investigating third-party sandbox latency and adding fallback polling.",
@@ -132,7 +131,7 @@ def seed_data(cursor):
             "Development",
             "Resolved",
             "Sneha (QA Analyst)",
-            "Amogh Patil (Dev)",
+            "Marcus Chen (Dev)",
             "Enforce strict discount cap validators in cart calculation pipeline before checkout commit.",
             "Applied maximum clamp limit at line 84 of pricing_service.py. Verified by automated tests.",
             yesterday,
@@ -174,7 +173,7 @@ def seed_data(cursor):
             "QA Staging",
             "Closed",
             "Ananya (UI Tester)",
-            "Amogh Patil (Frontend)",
+            "Elena Rostova (Frontend)",
             "Add mobile-first media queries and CSS z-index stacking context checks in design system.",
             "Updated CSS z-index and added Bootstrap 5 offcanvas component. Closed after QA review.",
             past_week,
@@ -212,8 +211,8 @@ def seed_data(cursor):
     ''', initial_defects)
 
     initial_prevention = [
-        ("Payments", "Architecture & Resilience", "Implement idempotent transaction keys and circuit breaker patterns to prevent payment double-charging.", "Third-party network timeouts without retry boundaries.", "Amogh Patil", past_week),
-        ("Authentication", "Security Standards", "Always use short-lived access tokens with cryptographic rotation. Never store plaintext tokens or passwords.", "Improper token revocation during session termination.", "Amogh Patil", past_week),
+        ("Payments", "Architecture & Resilience", "Implement idempotent transaction keys and circuit breaker patterns to prevent payment double-charging.", "Third-party network timeouts without retry boundaries.", "Alex Rivera (QA Lead)", past_week),
+        ("Authentication", "Security Standards", "Always use short-lived access tokens with cryptographic rotation. Never store plaintext tokens or passwords.", "Improper token revocation during session termination.", "Security Architecture", past_week),
         ("Inventory", "Database Concurrency", "Enforce atomic database updates and row-level locking for inventory balances to prevent race conditions.", "Unconstrained concurrent reads before write operations.", "Deepak DBA", past_week),
         ("Cart & Checkout", "Defensive Programming", "Validate discount totals against strict business threshold ceilings before committing checkout transactions.", "Compound discount calculation omitting boundary checks.", "Sneha QA", past_week)
     ]
