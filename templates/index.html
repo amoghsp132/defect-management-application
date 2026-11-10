@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defect Management Application | SDMCET</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-navy: #1e293b;
+            --accent-blue: #2563eb;
+            --bg-canvas: #f8fafc;
+        }
+        body {
+            background-color: var(--bg-canvas);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #1e293b;
+        }
+        .header-brand {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 20px 0;
+            border-bottom: 4px solid #3b82f6;
+        }
+        .kpi-stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.15s ease;
+        }
+        .kpi-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .badge-severity-blocker { background-color: #7f1d1d; color: #fef2f2; font-weight: 600; }
+        .badge-severity-critical { background-color: #dc2626; color: white; font-weight: 600; }
+        .badge-severity-major { background-color: #ea580c; color: white; font-weight: 600; }
+        .badge-severity-minor { background-color: #f59e0b; color: #1e293b; font-weight: 600; }
+        .badge-severity-trivial { background-color: #64748b; color: white; font-weight: 600; }
+
+        .badge-status-new { background-color: #3b82f6; color: white; }
+        .badge-status-assigned { background-color: #8b5cf6; color: white; }
+        .badge-status-inprogress { background-color: #f59e0b; color: #1e293b; }
+        .badge-status-resolved { background-color: #10b981; color: white; }
+        .badge-status-verified { background-color: #059669; color: white; }
+        .badge-status-closed { background-color: #475569; color: white; }
+
+        .nav-tabs .nav-link {
+            font-weight: 600;
+            color: #64748b;
+        }
+        .nav-tabs .nav-link.active {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="header-brand">
+        <div class="container-fluid px-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div>
+                    <h4 class="fw-bold mb-1 d-flex align-items-center">
+                        <i class="fa-solid fa-bug me-2 text-danger"></i>
+                        Web-Based Defect Management Application
+                    </h4>
+                    <div class="small text-light opacity-75">
+                        Addressing Slide 1.9 &bull; Defect Prevention, Discovery, Recording/Reporting, Classification, Resolution & Prediction
+                    </div>
+                </div>
+                <div class="text-end text-light small mt-2 mt-md-0">
+                    <div><strong>Amogh S Patil</strong> (2SDS23CS011)</div>
+                    <div class="opacity-75">SDM College of Engineering & Technology, Dharwad &bull; VII Sem CSE</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4 py-4">
+
+        <!-- Defect Prediction Alert Banner (Subprocess 6 & Slide 1 requirement) -->
+        <div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap justify-content-between align-items-center p-3 mb-4" id="predictionAlert">
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-triangle-exclamation fs-2 text-warning me-3"></i>
+                <div>
+                    <div class="fw-bold text-dark" id="predictionTitle">Defect Prediction Engine: Analyzing Metrics...</div>
+                    <div class="small text-muted" id="predictionDesc">Evaluating module concentrations and historical failure risks.</div>
+                </div>
+            </div>
+            <div class="mt-2 mt-md-0">
+                <a href="/api/export/csv" class="btn btn-sm btn-outline-dark me-2">
+                    <i class="fa-solid fa-file-csv me-1"></i> Export CSV (Bugzilla/FogBugz Format)
+                </a>
+                <button class="btn btn-sm btn-primary" onclick="loadAll()">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg">
+                <div class="kpi-stat-card border-start border-primary border-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Total Defects</div>
+                    <div class="fs-3 fw-bold text-dark mt-1" id="kpiTotal">0</div>
+                    <div class="small text-muted">All Recorded Bugs</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <div class="kpi-stat-card border-start border-warning border-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Open & Active</div>
+                    <div class="fs-3 fw-bold text-warning mt-1" id="kpiOpen">0</div>
+                    <div class="small text-muted">New, Assigned, In Progress</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <div class="kpi-stat-card border-start border-success border-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Resolved / Closed</div>
+                    <div class="fs-3 fw-bold text-success mt-1" id="kpiClosed">0</div>
+                    <div class="small text-muted">Verified & Patched</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <div class="kpi-stat-card border-start border-danger border-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Critical / Blockers</div>
+                    <div class="fs-3 fw-bold text-danger mt-1" id="kpiCritical">0</div>
+                    <div class="small text-muted">High Impact Issues</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg">
+                <div class="kpi-stat-card border-start border-info border-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Predicted High Risk</div>
+                    <div class="fs-3 fw-bold text-info mt-1" id="kpiRiskModule">--</div>
+                    <div class="small text-muted">Highest Defect Density</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Analytics Row (Subprocess 6: Prediction & Statistics) -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-white py-2 fw-bold small text-muted">
+                        <i class="fa-solid fa-chart-pie me-1 text-primary"></i> Severity Classification
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center">
+                        <canvas id="severityChart" style="max-height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-white py-2 fw-bold small text-muted">
+                        <i class="fa-solid fa-bars-progress me-1 text-success"></i> Resolution Status Pipeline
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center">
+                        <canvas id="statusChart" style="max-height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-white py-2 fw-bold small text-muted">
+                        <i class="fa-solid fa-diagram-project me-1 text-info"></i> Discovery Phase Distribution
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center">
+                        <canvas id="discoveryChart" style="max-height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- The 6 Subprocesses Tabs View -->
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-header bg-white pt-3 pb-0">
+                <ul class="nav nav-tabs card-header-tabs" id="subprocessesTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-tracker">
+                            <i class="fa-solid fa-list-check me-2"></i>Defect Tracker & Resolution (Subprocess 4 & 5)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-record">
+                            <i class="fa-solid fa-plus-circle me-2 text-primary"></i>Record & Report Defect (Subprocess 2 & 3)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-prevention">
+                            <i class="fa-solid fa-shield-virus me-2 text-success"></i>Defect Prevention & RCA (Subprocess 1)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-prediction">
+                            <i class="fa-solid fa-brain me-2 text-danger"></i>Defect Prediction Matrix (Subprocess 6)
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div class="tab-content">
+
+                    <!-- ======================================================== -->
+                    <!-- TAB 1: DEFECT TRACKER & RESOLUTION WORKFLOW              -->
+                    <!-- ======================================================== -->
+                    <div class="tab-pane fade show active" id="tab-tracker">
+                        <!-- Filters -->
+                        <div class="row g-2 mb-3 align-items-center">
+                            <div class="col-md-3">
+                                <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Search title or ID..." onkeyup="filterDefectsLocal()">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterStatus" class="form-select form-select-sm" onchange="fetchDefects()">
+                                    <option value="all">All Statuses</option>
+                                    <option value="New">New</option>
+                                    <option value="Assigned">Assigned</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                    <option value="Verified">Verified</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterSeverity" class="form-select form-select-sm" onchange="fetchDefects()">
+                                    <option value="all">All Severities</option>
+                                    <option value="Blocker">Blocker</option>
+                                    <option value="Critical">Critical</option>
+                                    <option value="Major">Major</option>
+                                    <option value="Minor">Minor</option>
+                                    <option value="Trivial">Trivial</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">Reset Filters</button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light small text-uppercase">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Summary & Description</th>
+                                        <th>Module & Type</th>
+                                        <th>Severity</th>
+                                        <th>Priority</th>
+                                        <th>Discovery Phase</th>
+                                        <th>Status</th>
+                                        <th>Assignee</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defectsTableBody">
+                                    <tr>
+                                        <td colspan="9" class="text-center py-4 text-muted">Loading defects...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ======================================================== -->
+                    <!-- TAB 2: RECORD & REPORT DEFECT (SUBPROCESS 2 & 3)         -->
+                    <!-- ======================================================== -->
+                    <div class="tab-pane fade" id="tab-record">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-9">
+                                <form id="formRecordDefect" onsubmit="submitNewDefect(event)">
+                                    <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-file-pen me-2"></i>Log Defect Details (Bugzilla / FogBugz Standard)</h5>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label small fw-bold">Defect Title / Summary *</label>
+                                            <input type="text" id="inpTitle" class="form-control" placeholder="Concise statement of defect" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">Functional Module *</label>
+                                            <select id="inpModule" class="form-select" required>
+                                                <option value="Authentication">Authentication</option>
+                                                <option value="Payments">Payments</option>
+                                                <option value="Cart & Checkout">Cart & Checkout</option>
+                                                <option value="Inventory">Inventory</option>
+                                                <option value="Notification Service">Notification Service</option>
+                                                <option value="API Gateway">API Gateway</option>
+                                                <option value="UI/Frontend">UI/Frontend</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label small fw-bold">Detailed Description *</label>
+                                            <textarea id="inpDescription" class="form-control" rows="2" placeholder="Describe defect context, symptoms, and environment specifics." required></textarea>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">Steps to Reproduce</label>
+                                            <textarea id="inpSteps" class="form-control" rows="3" placeholder="1. Navigate to...&#10;2. Click on...&#10;3. Observe..."></textarea>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">Expected vs. Actual Outcome</label>
+                                            <textarea id="inpExpected" class="form-control mb-2" rows="1" placeholder="Expected behavior..."></textarea>
+                                            <textarea id="inpActual" class="form-control" rows="1" placeholder="Actual erroneous behavior..."></textarea>
+                                        </div>
+
+                                        <!-- Classification Row (Subprocess 4) -->
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">Classification Type</label>
+                                            <select id="inpType" class="form-select">
+                                                <option value="Functional Bug">Functional Bug</option>
+                                                <option value="Security">Security Vulnerability</option>
+                                                <option value="UI/UX">UI / Layout</option>
+                                                <option value="Backend/API">Backend / API</option>
+                                                <option value="Database">Database / Concurrency</option>
+                                                <option value="Performance">Performance / Latency</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">Severity</label>
+                                            <select id="inpSeverity" class="form-select">
+                                                <option value="Critical">Critical</option>
+                                                <option value="Blocker">Blocker</option>
+                                                <option value="Major" selected>Major</option>
+                                                <option value="Minor">Minor</option>
+                                                <option value="Trivial">Trivial</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">Priority</label>
+                                            <select id="inpPriority" class="form-select">
+                                                <option value="P1 (High)">P1 (High - Immediate)</option>
+                                                <option value="P2 (Medium)" selected>P2 (Medium - Normal)</option>
+                                                <option value="P3 (Low)">P3 (Low - Non-Urgent)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">Discovery Phase (Subprocess 2)</label>
+                                            <select id="inpDiscovery" class="form-select">
+                                                <option value="Unit Testing">Unit Testing</option>
+                                                <option value="Integration Testing">Integration Testing</option>
+                                                <option value="System Testing" selected>System Testing</option>
+                                                <option value="User Acceptance Testing (UAT)">Acceptance / UAT</option>
+                                                <option value="Code Review">Code Review</option>
+                                                <option value="Security Audit">Security Audit</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">Test Environment</label>
+                                            <input type="text" id="inpEnvironment" class="form-control" value="QA Staging">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">Reporter Name</label>
+                                            <input type="text" id="inpReporter" class="form-control" value="Amogh S Patil (QA Lead)">
+                                        </div>
+
+                                        <!-- Prevention Note (Subprocess 1 link) -->
+                                        <div class="col-12">
+                                            <label class="form-label small fw-bold">Defect Prevention Guideline / Root Cause Assessment</label>
+                                            <textarea id="inpPrevention" class="form-control" rows="2" placeholder="Guideline to prevent similar bugs in future iterations (Knowledge base)."></textarea>
+                                        </div>
+
+                                        <div class="col-12 text-end mt-4">
+                                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold">
+                                                <i class="fa-solid fa-cloud-arrow-up me-1"></i> Submit Defect Record
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ======================================================== -->
+                    <!-- TAB 3: DEFECT PREVENTION & RCA (SUBPROCESS 1)            -->
+                    <!-- ======================================================== -->
+                    <div class="tab-pane fade" id="tab-prevention">
+                        <div class="row g-4">
+                            <div class="col-lg-7">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-book-open me-2 text-success"></i>Prevention Knowledge Base & Lessons Learned</h6>
+                                <p class="small text-muted">
+                                    Subprocess 1 of Defect Management focuses on root-cause eradication. Captured guidelines are shared across development teams to prevent recurrence.
+                                </p>
+                                <div id="preventionList" class="list-group">
+                                    <div class="text-muted small">Loading prevention guidelines...</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="card p-3 bg-light border-0">
+                                    <h6 class="fw-bold mb-2">Add Prevention Rule</h6>
+                                    <form id="formAddPrevention" onsubmit="submitPrevention(event)">
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-bold">Module</label>
+                                            <input type="text" id="prevModule" class="form-control form-control-sm" placeholder="e.g. Payments, Auth" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-bold">Category</label>
+                                            <select id="prevCategory" class="form-select form-select-sm">
+                                                <option value="Architecture & Resilience">Architecture & Resilience</option>
+                                                <option value="Security Standards">Security Standards</option>
+                                                <option value="Database Concurrency">Database Concurrency</option>
+                                                <option value="Defensive Programming">Defensive Programming</option>
+                                                <option value="Unit Test Coverage">Unit Test Coverage</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-bold">Prevention Guideline</label>
+                                            <textarea id="prevGuideline" class="form-control form-control-sm" rows="2" placeholder="Actionable standard to prevent recurrence..." required></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold">Root Cause Pattern</label>
+                                            <input type="text" id="prevPattern" class="form-control form-control-sm" placeholder="e.g. Unchecked nulls, lack of timeout" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-success w-100">
+                                            <i class="fa-solid fa-plus me-1"></i> Add to Knowledge Base
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ======================================================== -->
+                    <!-- TAB 4: DEFECT PREDICTION MATRIX (SUBPROCESS 6)           -->
+                    <!-- ======================================================== -->
+                    <div class="tab-pane fade" id="tab-prediction">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h5 class="fw-bold mb-2 text-danger"><i class="fa-solid fa-microchip me-2"></i>Defect Prediction Modeling & Risk Scoring</h5>
+                                <p class="text-secondary small">
+                                    As outlined in textbook section <strong>1.9 (Defect Prediction)</strong> and slide 1 (Defect Tools), 
+                                    modern quality engineering does not merely record defects—it uses historical failure density, severity distributions, 
+                                    and module complexity metrics to predict upcoming defects.
+                                </p>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-bordered table-sm small">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Module Name</th>
+                                                <th>Total Defects</th>
+                                                <th>Weighted Risk Score</th>
+                                                <th>Predicted Likelihood</th>
+                                                <th>Recommended Quality Gate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="riskMatrixBody">
+                                            <tr><td colspan="5" class="text-center py-3 text-muted">Calculating module risk matrices...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="p-3 bg-light rounded border text-center">
+                                    <i class="fa-solid fa-shield-virus fs-1 text-primary mb-2"></i>
+                                    <h6 class="fw-bold">Automated Quality Gate</h6>
+                                    <p class="small text-muted mb-0">
+                                        Modules scoring higher than 6 risk points automatically fail release readiness audits until required regression test suites achieve >= 85% coverage.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Status Advance / Edit Modal -->
+    <div class="modal fade" id="modalDefectEdit" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold" id="modalDefectTitle">Defect Lifecycle Status Transition</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editDefectId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Lifecycle Status</label>
+                        <select id="editStatus" class="form-select">
+                            <option value="New">New</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Assigned Developer</label>
+                        <input type="text" id="editAssignee" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Resolution Notes / Patch Verification</label>
+                        <textarea id="editResolution" class="form-control" rows="3" placeholder="Describe root cause fix or test verification notes."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveDefectEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-3 text-center small">
+        <div class="container">
+            <div>SDM College of Engineering & Technology, Dharwad &bull; Department of Computer Science & Engineering</div>
+            <div class="text-secondary mt-1">Software Testing (22UCSES731) Assignment &bull; Submitted by Amogh S Patil (2SDS23CS011) &bull; Academic Year 2026-27</div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App JavaScript -->
+    <script>
+        let cachedDefects = [];
+        let severityChartInstance = null;
+        let statusChartInstance = null;
+        let discoveryChartInstance = null;
+        let editModal = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            editModal = new bootstrap.Modal(document.getElementById('modalDefectEdit'));
+            loadAll();
+        });
+
+        async function loadAll() {
+            await fetchDefects();
+            await fetchAnalytics();
+            await fetchPrevention();
+        }
+
+        async function fetchDefects() {
+            const status = document.getElementById('filterStatus').value;
+            const severity = document.getElementById('filterSeverity').value;
+
+            let url = `/api/defects?status=${status}&severity=${severity}`;
+            try {
+                const res = await fetch(url);
+                cachedDefects = await res.json();
+                renderDefectsTable(cachedDefects);
+            } catch (e) {
+                console.error("Failed to fetch defects:", e);
+            }
+        }
+
+        function filterDefectsLocal() {
+            const query = document.getElementById('filterSearch').value.toLowerCase();
+            const filtered = cachedDefects.filter(d => 
+                d.title.toLowerCase().includes(query) ||
+                d.defect_code.toLowerCase().includes(query) ||
+                d.module.toLowerCase().includes(query)
+            );
+            renderDefectsTable(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterStatus').value = 'all';
+            document.getElementById('filterSeverity').value = 'all';
+            fetchDefects();
+        }
+
+        function getSeverityBadge(sev) {
+            const s = (sev || '').toLowerCase();
+            if (s === 'blocker') return 'badge-severity-blocker';
+            if (s === 'critical') return 'badge-severity-critical';
+            if (s === 'major') return 'badge-severity-major';
+            if (s === 'minor') return 'badge-severity-minor';
+            return 'badge-severity-trivial';
+        }
+
+        function getStatusBadge(st) {
+            const s = (st || '').toLowerCase().replace(' ', '');
+            if (s === 'new') return 'badge-status-new';
+            if (s === 'assigned') return 'badge-status-assigned';
+            if (s === 'inprogress') return 'badge-status-inprogress';
+            if (s === 'resolved') return 'badge-status-resolved';
+            if (s === 'verified') return 'badge-status-verified';
+            return 'badge-status-closed';
+        }
+
+        function renderDefectsTable(defects) {
+            const tbody = document.getElementById('defectsTableBody');
+            tbody.innerHTML = '';
+
+            if (!defects || defects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No defects found matching criteria.</td></tr>';
+                return;
+            }
+
+            defects.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold font-monospace text-primary">${d.defect_code}</td>
+                    <td>
+                        <div class="fw-semibold">${d.title}</div>
+                        <div class="small text-muted text-truncate" style="max-width: 280px;">${d.description}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">${d.module}</span>
+                        <div class="small text-secondary">${d.type}</div>
+                    </td>
+                    <td><span class="badge ${getSeverityBadge(d.severity)}">${d.severity}</span></td>
+                    <td><span class="badge bg-secondary">${d.priority}</span></td>
+                    <td><small class="text-muted">${d.discovery_phase}</small></td>
+                    <td><span class="badge ${getStatusBadge(d.status)}">${d.status}</span></td>
+                    <td><small class="fw-semibold">${d.assignee}</small></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openEditModal(${d.id})">
+                            <i class="fa-solid fa-pen-to-square me-1"></i> Update
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openEditModal(id) {
+            const d = cachedDefects.find(item => item.id === id);
+            if (!d) return;
+
+            document.getElementById('editDefectId').value = d.id;
+            document.getElementById('modalDefectTitle').innerText = `${d.defect_code}: ${d.title}`;
+            document.getElementById('editStatus').value = d.status;
+            document.getElementById('editAssignee').value = d.assignee;
+            document.getElementById('editResolution').value = d.resolution_notes || '';
+
+            editModal.show();
+        }
+
+        async function saveDefectEdit() {
+            const id = document.getElementById('editDefectId').value;
+            const body = {
+                status: document.getElementById('editStatus').value,
+                assignee: document.getElementById('editAssignee').value,
+                resolution_notes: document.getElementById('editResolution').value
+            };
+
+            await fetch(`/api/defects/${id}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+
+            editModal.hide();
+            loadAll();
+        }
+
+        async function submitNewDefect(e) {
+            e.preventDefault();
+            const payload = {
+                title: document.getElementById('inpTitle').value,
+                module: document.getElementById('inpModule').value,
+                description: document.getElementById('inpDescription').value,
+                steps_to_reproduce: document.getElementById('inpSteps').value,
+                expected_behavior: document.getElementById('inpExpected').value,
+                actual_behavior: document.getElementById('inpActual').value,
+                type: document.getElementById('inpType').value,
+                severity: document.getElementById('inpSeverity').value,
+                priority: document.getElementById('inpPriority').value,
+                discovery_phase: document.getElementById('inpDiscovery').value,
+                environment: document.getElementById('inpEnvironment').value,
+                reporter: document.getElementById('inpReporter').value,
+                prevention_guideline: document.getElementById('inpPrevention').value
+            };
+
+            const res = await fetch('/api/defects', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Defect recorded successfully!");
+                document.getElementById('formRecordDefect').reset();
+                const triggerTab = new bootstrap.Tab(document.querySelector('#subprocessesTabs a[href="#tab-tracker"]'));
+                triggerTab.show();
+                loadAll();
+            } else {
+                alert("Failed to submit defect.");
+            }
+        }
+
+        async function fetchAnalytics() {
+            try {
+                const res = await fetch('/api/analytics');
+                const data = await res.json();
+
+                document.getElementById('kpiTotal').innerText = data.total_defects || 0;
+                document.getElementById('kpiOpen').innerText = data.open_defects || 0;
+                document.getElementById('kpiClosed').innerText = data.closed_defects || 0;
+                document.getElementById('kpiCritical').innerText = data.critical_count || 0;
+                document.getElementById('kpiRiskModule').innerText = data.riskiest_module || '--';
+
+                document.getElementById('predictionTitle').innerText = `Defect Prediction Alert: Module '${data.riskiest_module}'`;
+                document.getElementById('predictionDesc').innerText = data.prediction_insight || '';
+
+                renderCharts(data);
+                renderRiskMatrix(data);
+            } catch (e) {
+                console.error("Failed to load analytics:", e);
+            }
+        }
+
+        function renderCharts(data) {
+            // Severity Chart
+            const ctxSev = document.getElementById('severityChart').getContext('2d');
+            if (severityChartInstance) severityChartInstance.destroy();
+            severityChartInstance = new Chart(ctxSev, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.by_severity || {}),
+                    datasets: [{
+                        data: Object.values(data.by_severity || {}),
+                        backgroundColor: ['#7f1d1d', '#dc2626', '#ea580c', '#f59e0b', '#64748b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Status Chart
+            const ctxStatus = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(ctxStatus, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.by_status || {}),
+                    datasets: [{
+                        label: 'Defect Count',
+                        data: Object.values(data.by_status || {}),
+                        backgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Discovery Chart
+            const ctxDisc = document.getElementById('discoveryChart').getContext('2d');
+            if (discoveryChartInstance) discoveryChartInstance.destroy();
+            discoveryChartInstance = new Chart(ctxDisc, {
+                type: 'polarArea',
+                data: {
+                    labels: Object.keys(data.by_discovery || {}),
+                    datasets: [{
+                        data: Object.values(data.by_discovery || {}),
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(220, 38, 38, 0.7)',
+                            'rgba(139, 92, 246, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function renderRiskMatrix(data) {
+            const tbody = document.getElementById('riskMatrixBody');
+            tbody.innerHTML = '';
+            const scores = data.module_risk_scores || {};
+            const modules = Object.keys(scores);
+
+            if (modules.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No module data.</td></tr>';
+                return;
+            }
+
+            modules.sort((a,b) => scores[b] - scores[a]);
+
+            modules.forEach(m => {
+                const score = scores[m];
+                const count = (data.by_module || {})[m] || 0;
+                const riskLevel = score >= 5 ? 'High (75%+)' : (score >= 3 ? 'Moderate (40%)' : 'Low (<15%)');
+                const badge = score >= 5 ? 'bg-danger' : (score >= 3 ? 'bg-warning text-dark' : 'bg-success');
+                const gate = score >= 5 ? 'Requires mandatory regression & security audit' : 'Standard automated unit tests';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold">${m}</td>
+                    <td>${count} defect(s)</td>
+                    <td><span class="badge ${badge}">${score} Risk Pts</span></td>
+                    <td>${riskLevel}</td>
+                    <td>${gate}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchPrevention() {
+            try {
+                const res = await fetch('/api/prevention');
+                const list = await res.json();
+                const container = document.getElementById('preventionList');
+                container.innerHTML = '';
+
+                if (list.length === 0) {
+                    container.innerHTML = '<div class="text-muted small">No prevention rules recorded yet.</div>';
+                    return;
+                }
+
+                list.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2 rounded border';
+                    item.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-primary fw-bold">${p.module} &bull; <span class="badge bg-secondary">${p.category}</span></h6>
+                            <small class="text-muted">${p.created_at}</small>
+                        </div>
+                        <p class="mb-1 small">${p.guideline}</p>
+                        <small class="text-muted"><strong>Root Cause Pattern:</strong> ${p.root_cause_pattern} (Added by ${p.added_by})</small>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (e) {
+                console.error("Failed to load prevention rules:", e);
+            }
+        }
+
+        async function submitPrevention(e) {
+            e.preventDefault();
+            const body = {
+                module: document.getElementById('prevModule').value,
+                category: document.getElementById('prevCategory').value,
+                guideline: document.getElementById('prevGuideline').value,
+                root_cause_pattern: document.getElementById('prevPattern').value
+            };
+
+            const res = await fetch('/api/prevention', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                document.getElementById('formAddPrevention').reset();
+                fetchPrevention();
+            }
+        }
+    </script>
+</body>
+</html>
